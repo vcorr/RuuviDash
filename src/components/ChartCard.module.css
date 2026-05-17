@@ -3,56 +3,61 @@
   border-radius: var(--radius-card);
   border: 1px solid var(--rule);
   padding: 18px 20px 16px;
-  display: flex; flex-direction: column; gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   min-height: 0;
 }
-
 .cardHeader {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
 }
-
 .eyebrow {
   font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10px; color: var(--faint); letter-spacing: 0.18em; margin-bottom: 2px;
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.18em;
+  margin-bottom: 2px;
 }
-
 .chartTitle { font-size: 18px; color: var(--ink); }
-
 .pills { display: flex; gap: 4px; }
-
 .pill {
-  padding: 5px 10px; border-radius: 4px;
-  text-transform: uppercase; cursor: pointer;
-  background: transparent; color: var(--muted);
+  padding: 5px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
   border: 1px solid var(--rule);
   font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10px; letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   transition: all 0.15s;
 }
-
 .pill:hover { border-color: var(--rule-strong); }
-
 .chartWrap { flex: 1; min-height: 0; }
-
 .legend {
-  display: flex; flex-wrap: wrap; gap: 18px;
-  border-top: 1px solid var(--rule); padding-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  border-top: 1px solid var(--rule);
+  padding-top: 12px;
   flex-shrink: 0;
 }
-
 .legendItem { display: flex; align-items: center; gap: 8px; }
-
 .legendDot { width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; }
-
 .legendLabel {
   font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10px; color: var(--muted); letter-spacing: 0.06em;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
 }
-
 .legendValue {
   font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
-  font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
-
 .legendUnit { color: var(--faint); margin-left: 2px; }
