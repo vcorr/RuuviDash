@@ -1,0 +1,44 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
+}
+
+:root {
+  --chrome-h: 34px;
+  --sidebar-w: 256px;
+  --radius-card: 10px;
+  --radius-room: 6px;
+  /* defaults (overridden by JS via applyThemeToRoot) */
+  --bg: #f3efe6; --sidebar: #ece8df; --surface: #fbfaf6; --surface-hi: #ffffff;
+  --ink: #1c1916; --muted: #7c7268; --faint: #a89e91;
+  --rule: rgba(28,25,22,0.08); --rule-strong: rgba(28,25,22,0.16); --warn: #b8762a;
+  --accent: #bf5a30; --accent-dim: rgba(191,90,48,0.10); --accent-edge: rgba(191,90,48,0.28);
+  --gap: 18px; --hero-big: 46px; --hero-small: 26px;
+  --tile-pad: 16px 20px; --tile-small-pad: 12px 18px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; }
+
+.app {
+  width: 100vw; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); color: var(--ink);
+  transition: background 0.25s, color 0.25s;
+}
+
+.app-body { flex: 1; display: flex; min-height: 0; }
+
+.main {
+  flex: 1; min-width: 0;
+  padding: 24px 28px 26px;
+  display: flex; flex-direction: column;
+  gap: var(--gap); overflow: hidden;
+}
+
+.content-grid {
+  display: grid; grid-template-columns: 1.6fr 1fr;
+  gap: 16px; flex: 1; min-height: 0;
+}

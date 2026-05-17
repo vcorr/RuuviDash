@@ -1,0 +1,96 @@
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  padding: 20px 14px 16px;
+  border-right: 1px solid var(--rule);
+  background: var(--sidebar);
+  display: flex; flex-direction: column; gap: 14px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 4px;
+}
+
+.locLabel {
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; color: var(--faint); letter-spacing: 0.18em;
+}
+
+.locCount {
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; color: var(--muted);
+}
+
+.list { display: flex; flex-direction: column; gap: 6px; }
+
+.card {
+  position: relative;
+  text-align: left; padding: 12px 12px 10px;
+  border-radius: var(--radius-room);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer; width: 100%;
+  color: inherit; transition: background 0.15s, border-color 0.15s;
+}
+
+.card:hover { background: color-mix(in srgb, var(--surface) 50%, transparent); }
+
+.selected {
+  background: var(--surface) !important;
+  border-color: var(--rule) !important;
+  box-shadow: 0 1px 0 var(--rule);
+}
+
+.accentRail {
+  position: absolute; left: -1px; top: 12px; bottom: 12px;
+  width: 2px; background: var(--accent); border-radius: 2px;
+}
+
+.cardTop {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.cardLeft { display: flex; align-items: center; gap: 8px; }
+
+.dot { width: 6px; height: 6px; border-radius: 3px; flex-shrink: 0; }
+
+.cardName { font-size: 13px; color: var(--muted); font-weight: 400; }
+.cardNameSelected { color: var(--ink); font-weight: 500; }
+
+.kindTag {
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px; color: var(--faint); letter-spacing: 0.12em;
+}
+
+.readings {
+  display: flex; gap: 12px;
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; color: var(--muted);
+}
+
+.readingTemp { color: var(--ink); }
+.readingMuted { color: var(--muted); }
+
+.pairBtn {
+  background: transparent;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 4px; padding: 8px 10px;
+  color: var(--muted);
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 0.08em;
+  cursor: pointer; text-transform: uppercase; width: 100%;
+}
+
+.footer { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+
+.footerRow {
+  display: flex; justify-content: space-between; gap: 8px;
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.footerLabel { color: var(--faint); letter-spacing: 0.14em; }
+.footerValue { color: var(--muted); }

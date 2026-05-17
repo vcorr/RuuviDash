@@ -1,0 +1,56 @@
+.chrome {
+  height: var(--chrome-h);
+  display: flex; align-items: center;
+  padding: 0 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.left { display: flex; align-items: center; gap: 10px; }
+
+.dotGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 4px);
+  gap: 2px;
+}
+
+.dot { width: 4px; height: 4px; border-radius: 0.5px; }
+
+.appName { color: var(--ink); }
+.sep { color: var(--faint); }
+.path { color: var(--muted); }
+
+.right { margin-left: auto; display: flex; align-items: center; gap: 0; }
+
+.liveIndicator {
+  display: flex; align-items: center; gap: 6px;
+  margin-right: 18px; font-size: 11px; color: var(--muted);
+}
+
+.liveDot {
+  width: 6px; height: 6px; border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.controls { display: flex; }
+
+.btn {
+  width: 32px; height: 24px;
+  display: grid; place-items: center;
+  background: transparent; border: none;
+  cursor: pointer; padding: 0;
+  color: var(--muted);
+  -webkit-app-region: no-drag;
+  transition: background 0.12s;
+}
+
+.btn:hover { background: rgba(0,0,0,0.06); }
+
+.minIcon { width: 10px; height: 1px; background: currentColor; }
+.maxIcon { width: 9px; height: 9px; border: 1px solid currentColor; }
