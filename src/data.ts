@@ -1,41 +1,24 @@
+import type { Sample } from './ruuvi/types'
+
 export type RoomKind = 'AIR' | 'Temp'
 
 export interface Room {
   id: string; name: string; kind: RoomKind;
   mac: string; battery: number; signal: number; fw: string;
   series: {
-    temp: number[]; humidity: number[];
-    co2?: number[]; voc?: number[]; pressure?: number[];
+    temp: Sample[]; humidity: Sample[];
+    co2?: Sample[]; voc?: Sample[]; pressure?: Sample[];
   };
+}
+
+export const RANGE_MS: Record<string, number> = {
+  '24h': 24 * 3600_000,
+  '7d':  7 * 24 * 3600_000,
 }
 
 export interface MetricMeta {
   label: string; unit: string; fmt: (v: number) => string;
 }
-
-const BASE = {
-  temp:     [20.1,19.8,19.6,19.4,19.3,19.2,19.4,19.9,20.5,21.0,21.4,21.8,22.0,22.1,21.9,21.7,21.5,21.4,21.6,21.8,21.7,21.4,21.0,20.6],
-  humidity: [52,53,54,55,55,56,56,55,53,51,49,48,47,47,46,46,47,48,49,51,52,51,50,49],
-  co2:      [480,470,460,455,450,450,470,540,640,720,780,810,820,800,760,720,690,720,790,860,910,830,720,610],
-  voc:      [18,17,17,16,16,16,17,19,21,22,23,24,24,23,22,21,22,24,32,38,31,26,22,20],
-  pressure: [1013,1013,1013,1013,1013,1013,1014,1014,1014,1014,1014,1014,1014,1014,1013,1013,1013,1013,1013,1013,1013,1013,1013,1013],
-}
-
-function shape(arr: number[], offset: number, scale = 1): number[] {
-  const mean = arr.reduce((a, b) => a + b, 0) / arr.length
-  return arr.map(v => mean + offset + (v - mean) * scale)
-}
-
-export const ROOMS: Room[] = [
-  { id: 'living', name: 'Living Room', kind: 'AIR', battery: 92, signal: -54, fw: '3.31.1', mac: '8F:2C:91',
-    series: { temp: shape(BASE.temp,0,1), humidity: shape(BASE.humidity,-4,0.9), co2: shape(BASE.co2,0,1), voc: shape(BASE.voc,0,1) } },
-  { id: 'bedroom', name: 'Bedroom', kind: 'Temp', battery: 78, signal: -61, fw: '3.31.1', mac: 'A2:4B:14',
-    series: { temp: shape(BASE.temp,-2.2,0.7), humidity: shape(BASE.humidity,6,0.6), pressure: shape(BASE.pressure,0,1) } },
-  { id: 'office', name: 'Office', kind: 'Temp', battery: 64, signal: -68, fw: '3.31.1', mac: 'C8:71:E3',
-    series: { temp: shape(BASE.temp,0.6,1.1), humidity: shape(BASE.humidity,-7,1.0), pressure: shape(BASE.pressure,0.5,1) } },
-  { id: 'balcony', name: 'Balcony', kind: 'Temp', battery: 58, signal: -77, fw: '3.31.1', mac: 'D1:09:5A',
-    series: { temp: shape(BASE.temp,-12,2.6), humidity: shape(BASE.humidity,20,1.4), pressure: shape(BASE.pressure,-1.5,1.4) } },
-]
 
 export const METRIC_META: Record<string, MetricMeta> = {
   temp:     { label: 'Temperature', unit: '°C', fmt: v => v.toFixed(1) },
@@ -46,37 +29,26 @@ export const METRIC_META: Record<string, MetricMeta> = {
 }
 
 export const DISPLAY_RANGES: Record<string, [number, number]> = {
-  temp: [12, 26], humidity: [25, 75], co2: [400, 1000], voc: [10, 45], pressure: [1008, 1018],
+  temp: [12, 26], humidity: [25, 75], co2: [400, 1000], voc: [0, 100], pressure: [1008, 1018],
 }
 
 export function latest(room: Room, key: string): number {
   const s = room.series[key as keyof typeof room.series]
   if (!s || s.length === 0) return 0
-  return s[s.length - 1]
+  return s[s.length - 1].v
 }
 
-export function sliceForRange(values: number[], range: string): number[] {
-  switch (range) {
-    case '1h':  return values.slice(-2)
-    case '24h': return values.slice()
-    case '7d':  return tile(values, 7)
-    case '30d': return tile(values, 30)
-    default:    return values.slice()
-  }
-}
-
-function tile(values: number[], days: number): number[] {
-  const samples = days * 8
-  const out = new Array(samples)
-  for (let i = 0; i < samples; i++) {
-    const t = (i / samples) * 24
-    const idx = Math.floor(t) % values.length
-    const next = (idx + 1) % values.length
-    const frac = t - Math.floor(t)
-    const drift = Math.sin((i / samples) * Math.PI * 4) * 0.6
-    out[i] = values[idx] * (1 - frac) + values[next] * frac + drift
-  }
+export function sliceForRange(samples: Sample[], range: string): number[] {
+  const ms = RANGE_MS[range]
+  if (!ms) return samples.map(s => s.v)
+  const cutoff = Date.now() - ms
+  const out: number[] = []
+  for (const s of samples) if (s.ts >= cutoff) out.push(s.v)
   return out
+}
+
+export function valuesOf(samples: Sample[] | undefined): number[] {
+  return samples ? samples.map(s => s.v) : []
 }
 
 export function rangeTicks(range: string): string[] {
@@ -125,7 +97,15 @@ export function subtextFor(metric: string, v: number): string {
 export function deltaFor(room: Room, metric: string, units: 'C' | 'F'): string {
   const s = room.series[metric as keyof typeof room.series]
   if (!s || s.length < 2) return ''
-  const d = s[s.length - 1] - s[s.length - 2]
+  const last = s[s.length - 1]
+  // Use the sample closest to 1h before the latest, fall back to first sample.
+  const target = last.ts - 3600_000
+  let baseline = s[0]
+  for (let i = s.length - 2; i >= 0; i--) {
+    if (s[i].ts <= target) { baseline = s[i]; break }
+    baseline = s[i]
+  }
+  const d = last.v - baseline.v
   if (metric === 'temp') {
     const dD = units === 'F' ? d * 9/5 : d
     return `${dD >= 0 ? '+' : ''}${dD.toFixed(1)}° / 1h`

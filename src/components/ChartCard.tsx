@@ -1,14 +1,15 @@
 import React from 'react'
 import { useTheme } from '../context'
 import {
-  sliceForRange, normalize, smoothPath, rangeTicks,
-  DISPLAY_RANGES, METRIC_META, latest, toUnit, displayUnit,
+  sliceForRange, normalize, smoothPath,
+  METRIC_META, latest, toUnit, displayUnit,
   type Room,
 } from '../data'
+import type { Sample } from '../ruuvi/types'
 import styles from './ChartCard.module.css'
 
-const RANGE_OPTIONS = ['1h', '24h', '7d', '30d']
-const MONO = '"Geist Mono", "JetBrains Mono", ui-monospace, monospace'
+const RANGE_OPTIONS = ['24h', '7d']
+const RANGE_LABEL: Record<string, string> = { '24h': '24 H', '7d': '7 D' }
 
 function metricColors(accentHex: string, warnHex: string): Record<string, string> {
   return {
@@ -29,7 +30,7 @@ interface Props {
 export default function ChartCard({ room, range, onRangeChange }: Props) {
   const { p, a, units } = useTheme()
   const isAir = room.kind === 'AIR'
-  const metrics = isAir ? ['temp', 'humidity', 'co2', 'voc'] : ['temp', 'humidity', 'pressure']
+  const metrics = isAir ? ['temp', 'humidity', 'co2'] : ['temp', 'humidity', 'pressure']
   const colors = metricColors(a.hex, p.warnHex)
 
   return (
@@ -51,29 +52,40 @@ export default function ChartCard({ room, range, onRangeChange }: Props) {
                 borderColor: 'var(--accent-edge)',
               } : {}}
             >
-              {opt}
+              {RANGE_LABEL[opt] ?? opt}
             </button>
           ))}
         </div>
       </div>
 
-      <div className={styles.chartWrap}>
-        <Chart room={room} range={range} metrics={metrics} colors={colors} surfaceColor={p.surface} />
-      </div>
-
-      <div className={styles.legend}>
+      <div className={styles.rowStack}>
         {metrics.map(k => {
           const m = METRIC_META[k]
-          const val = latest(room, k)
-          const disp = k === 'temp' ? toUnit(val, 'temp', units).toFixed(1) : m.fmt(val)
+          const raw = latest(room, k)
+          const disp = k === 'temp' ? toUnit(raw, 'temp', units).toFixed(1) : m.fmt(raw)
           const unit = displayUnit(k, units)
+          const series = (room.series as Record<string, Sample[]>)[k] ?? []
+          const hasData = series.length > 0
           return (
-            <div key={k} className={styles.legendItem}>
-              <div className={styles.legendDot} style={{ background: colors[k] }} />
-              <span className={styles.legendLabel}>{m.label.toUpperCase()}</span>
-              <span className={styles.legendValue}>
-                {disp}<span className={styles.legendUnit}>{unit}</span>
-              </span>
+            <div key={k} className={styles.row}>
+              <div className={styles.rowLabel}>
+                <span
+                  className={styles.rowLabelText}
+                  style={{ color: colors[k] }}
+                >{m.label.toUpperCase()}</span>
+                <span className={styles.rowValue}>
+                  {hasData ? disp : '—'}
+                  <span className={styles.rowUnit}>{hasData ? unit : ''}</span>
+                </span>
+              </div>
+              <div className={styles.rowChart}>
+                <RowChart
+                  series={series}
+                  range={range}
+                  color={colors[k]}
+                  withGlow={k === 'temp'}
+                />
+              </div>
             </div>
           )
         })}
@@ -82,96 +94,94 @@ export default function ChartCard({ room, range, onRangeChange }: Props) {
   )
 }
 
-function Chart({
-  room, range, metrics, colors, surfaceColor,
+function RowChart({
+  series, range, color, withGlow,
 }: {
-  room: Room; range: string; metrics: string[]
-  colors: Record<string, string>; surfaceColor: string
+  series: Sample[]; range: string; color: string
+  withGlow: boolean
 }) {
-  const { p, a } = useTheme()
-  const W = 760, H = 280, PX = 32, PY = 14
-  const ticks = rangeTicks(range)
+  const { p } = useTheme()
+  const W = 760, H = 64, PX = 4, PY = 4
 
-  const sliced: Record<string, number[]> = {}
-  metrics.forEach(k => {
-    sliced[k] = sliceForRange((room.series as Record<string, number[]>)[k] ?? [], range)
-  })
+  const sliced = sliceForRange(series, range)
+  // Auto-scale per-metric so live variation is visible. When proper history
+  // exists, we may want a hybrid (clamp to a minimum range so noise doesn't
+  // appear as wild swings) but for now raw auto-scale matches the Android app.
+  const normed = normalize(sliced)
+  const path = smoothPath(normed, W, H, PX, PY)
+  const fillPath = path && withGlow
+    ? `${path} L ${W - PX} ${H - PY} L ${PX} ${H - PY} Z`
+    : ''
 
-  const normed: Record<string, number[]> = {}
-  metrics.forEach(k => { normed[k] = normalize(sliced[k], DISPLAY_RANGES[k]) })
+  const clipId = React.useId()
+  const gradId = React.useId()
 
-  const tempNorm = normed['temp'] ?? []
-  const tempPath = smoothPath(tempNorm, W, H, PX, PY)
-  const fillPath = tempPath ? `${tempPath} L ${W - PX} ${H - PY} L ${PX} ${H - PY} Z` : ''
+  const last = normed[normed.length - 1]
+  const lastX = W - PX
+  const lastY = last != null
+    ? PY + (H - PY * 2) * (1 - Math.max(0, Math.min(1, last)))
+    : null
+
+  const scaleMin = sliced.length ? Math.min(...sliced) : null
+  const scaleMax = sliced.length ? Math.max(...sliced) : null
+  const fmtScale = (v: number) => Math.abs(v) >= 100 ? String(Math.round(v)) : v.toFixed(1)
 
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
-      style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible' }}
+      style={{ width: '100%', height: '100%', display: 'block' }}
     >
       <defs>
-        <linearGradient id="chartGlow" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor={a.hex} stopOpacity="0.16" />
-          <stop offset="1" stopColor={a.hex} stopOpacity="0" />
-        </linearGradient>
+        <clipPath id={clipId}>
+          <rect x={PX} y={0} width={W - PX * 2} height={H} />
+        </clipPath>
+        {withGlow && (
+          <linearGradient id={gradId} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor={color} stopOpacity="0.16" />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        )}
       </defs>
 
-      {[0.2, 0.4, 0.6, 0.8].map(v => (
-        <line
-          key={v}
-          x1={PX} x2={W - PX}
-          y1={PY + (H - PY * 2) * v}
-          y2={PY + (H - PY * 2) * v}
-          stroke={p.rule} strokeWidth="1"
-        />
-      ))}
+      <line
+        x1={PX} x2={W - PX}
+        y1={H / 2} y2={H / 2}
+        stroke={p.rule} strokeWidth="1"
+      />
 
-      {ticks.map((label, i) => {
-        const x = PX + ((W - PX * 2) * i) / Math.max(1, ticks.length - 1)
-        return (
-          <g key={i}>
-            <line x1={x} x2={x} y1={PY} y2={H - PY}
-              stroke={p.rule} strokeWidth="1" strokeDasharray="1 5" />
-            <text
-              x={x} y={H - 2}
-              textAnchor="middle" fontSize="9"
-              fill={p.faint} fontFamily={MONO} letterSpacing="0.1em"
-            >
-              {label}
-            </text>
-          </g>
-        )
-      })}
+      <g clipPath={`url(#${clipId})`}>
+        {fillPath && <path d={fillPath} fill={`url(#${gradId})`} />}
+        {path && (
+          <path
+            d={path}
+            fill="none"
+            stroke={color}
+            strokeWidth={withGlow ? 1.8 : 1.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={withGlow ? 1 : 0.9}
+            style={{ transition: 'd 0.35s ease', vectorEffect: 'non-scaling-stroke' } as React.CSSProperties}
+          />
+        )}
+      </g>
 
-      {fillPath && <path d={fillPath} fill="url(#chartGlow)" />}
+      {lastY != null && (
+        <circle cx={lastX} cy={lastY} r="2.5" fill={color} stroke={p.surface} strokeWidth="1.5" />
+      )}
 
-      {metrics.map(k => (
-        <path
-          key={k}
-          d={smoothPath(normed[k], W, H, PX, PY)}
-          fill="none"
-          stroke={colors[k]}
-          strokeWidth={k === 'temp' ? 1.8 : 1.2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={k === 'temp' ? 1 : 0.75}
-          style={{ transition: 'd 0.35s ease' }}
-        />
-      ))}
-
-      {metrics.map(k => {
-        const vs = normed[k]
-        if (!vs.length) return null
-        const x = W - PX
-        const y = PY + (H - PY * 2) * (1 - vs[vs.length - 1])
-        return (
-          <g key={k}>
-            {k === 'temp' && <circle cx={x} cy={y} r="6" fill={colors[k]} opacity="0.18" />}
-            <circle cx={x} cy={y} r="2.5" fill={colors[k]} stroke={surfaceColor} strokeWidth="1.5" />
-          </g>
-        )
-      })}
+      {scaleMax != null && scaleMin != null && scaleMax !== scaleMin && (
+        <>
+          <text x={PX + 4} y={PY + 8} fontSize="8" fill={p.faint}
+            fontFamily='"Geist Mono", ui-monospace, monospace' letterSpacing="0.06em">
+            {fmtScale(scaleMax)}
+          </text>
+          <text x={PX + 4} y={H - PY - 2} fontSize="8" fill={p.faint}
+            fontFamily='"Geist Mono", ui-monospace, monospace' letterSpacing="0.06em">
+            {fmtScale(scaleMin)}
+          </text>
+        </>
+      )}
     </svg>
   )
 }

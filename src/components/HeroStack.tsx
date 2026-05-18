@@ -3,8 +3,9 @@ import { useTheme } from '../context'
 import {
   latest, tone, subtextFor, deltaFor,
   toUnit, displayUnit, normalize, smoothPath,
-  METRIC_META, type Room,
+  valuesOf, METRIC_META, type Room,
 } from '../data'
+import type { Sample } from '../ruuvi/types'
 import styles from './HeroStack.module.css'
 
 const MONO = '"Geist Mono", "JetBrains Mono", ui-monospace, monospace'
@@ -48,7 +49,7 @@ function HeroTile({ room, metric, label, big }: {
   const unit = displayUnit(metric, units)
   const sub = subtextFor(metric, val)
   const delta = deltaFor(room, metric, units)
-  const seriesRaw = (room.series as Record<string, number[] | undefined>)[metric]
+  const seriesRaw = valuesOf((room.series as Record<string, Sample[] | undefined>)[metric])
 
   const valueColor = isWarn ? 'var(--warn)' : (big ? 'var(--accent)' : 'var(--ink)')
   const sparkColor = isWarn ? p.warnHex : (big ? a.hex : p.muted)
@@ -66,7 +67,7 @@ function HeroTile({ room, metric, label, big }: {
         <div className={styles.sub}>{sub}</div>
       </div>
       <div className={styles.tileRight}>
-        {seriesRaw && seriesRaw.length >= 2 && (
+        {seriesRaw.length >= 2 && (
           <Sparkline values={seriesRaw} color={sparkColor} />
         )}
         <span className={styles.delta} style={{ color: isWarn ? 'var(--warn)' : 'var(--muted)', fontFamily: MONO }}>

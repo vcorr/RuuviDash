@@ -38,6 +38,15 @@
   flex-shrink: 0;
 }
 
+.liveDotSyncing {
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+
 .controls { display: flex; }
 
 .btn {

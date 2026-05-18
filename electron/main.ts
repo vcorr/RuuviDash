@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { startRuuviScanner } from './ruuvi-scanner'
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -25,6 +26,17 @@ function createWindow() {
     else win.maximize()
   })
   ipcMain.on('window:close', () => win.close())
+
+  const send = (channel: string, payload: unknown) => {
+    if (!win.isDestroyed()) win.webContents.send(channel, payload)
+  }
+
+  const scanner = startRuuviScanner({
+    onSample: (r) => send('ruuvi:sample', r),
+    onHistory: (h) => send('ruuvi:history', h),
+    onSyncStatus: (s) => send('ruuvi:sync', s),
+  })
+  win.on('closed', () => { void scanner.stop() })
 }
 
 app.whenReady().then(createWindow)

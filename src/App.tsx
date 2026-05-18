@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { ROOMS } from './data'
 import { LIGHT_PALETTE, DARK_PALETTE, ACCENTS, DENSITY, applyThemeToRoot, type Theme } from './tokens'
 import { ThemeContext } from './context'
+import { useLiveRooms } from './ruuvi/store'
 import WindowChrome from './components/WindowChrome'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
@@ -9,7 +9,7 @@ import ChartCard from './components/ChartCard'
 import HeroStack from './components/HeroStack'
 import './styles/global.css'
 
-type Range = '1h' | '24h' | '7d' | '30d'
+type Range = '24h' | '7d'
 
 interface Prefs {
   units: 'C' | 'F'
@@ -23,37 +23,50 @@ const DEFAULT_PREFS: Prefs = {
 }
 
 export default function App() {
-  const [selectedId, setSelectedId] = useState('living')
-  const [range, setRange] = useState<Range>('24h')
+  const rooms = useLiveRooms()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [range, setRange] = useState<Range>('7d')
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
 
-  const room = ROOMS.find(r => r.id === selectedId) ?? ROOMS[0]
+  useEffect(() => {
+    if (rooms.length > 0 && (selectedId === null || !rooms.find(r => r.id === selectedId))) {
+      setSelectedId(rooms[0].id)
+    }
+  }, [rooms, selectedId])
+
   const palette = prefs.theme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE
   const accent = ACCENTS[prefs.accent] ?? ACCENTS['#bf5a30']
   const density = DENSITY[prefs.density] ?? DENSITY.comfortable
-
   const theme: Theme = { p: palette, a: accent, d: density, units: prefs.units }
 
   useEffect(() => { applyThemeToRoot(theme) }, [prefs])
-
-  // Apply on first render
   useEffect(() => { applyThemeToRoot(theme) }, [])
 
-  // prefs setter exposed for future settings panel
   void setPrefs
+
+  const room = rooms.find(r => r.id === selectedId) ?? rooms[0]
 
   return (
     <ThemeContext.Provider value={theme}>
       <div className="app">
-        <WindowChrome room={room} />
+        {room ? <WindowChrome room={room} /> : <div className="chrome-placeholder" />}
         <div className="app-body">
-          <Sidebar rooms={ROOMS} selectedId={selectedId} onSelect={setSelectedId} />
+          <Sidebar rooms={rooms} selectedId={selectedId ?? ''} onSelect={setSelectedId} />
           <main className="main">
-            <Header room={room} />
-            <div className="content-grid">
-              <ChartCard room={room} range={range} onRangeChange={r => setRange(r as Range)} />
-              <HeroStack room={room} />
-            </div>
+            {room ? (
+              <>
+                <Header room={room} />
+                <div className="content-grid">
+                  <ChartCard room={room} range={range} onRangeChange={r => setRange(r as Range)} />
+                  <HeroStack room={room} />
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-title">Listening for Ruuvi sensors…</div>
+                <div className="empty-sub">Make sure Bluetooth is on and your sensor is in range.</div>
+              </div>
+            )}
           </main>
         </div>
       </div>
