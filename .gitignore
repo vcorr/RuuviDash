@@ -3,4 +3,5 @@ dist/
 dist-electron/
 *.tsbuildinfo
 out/
+release/
 .research/
